@@ -1,37 +1,58 @@
-// One Line, One Chill — make.fun bounty u-azazex-one-line-one-chill-6d4d5488.
-//
-// A single sentence of horror, written to $MAKEFUN_OUTPUT_DIR/entry.txt
-// with no trailing newline, and echoed to stdout. Node 22, stdlib only,
-// no network, fully deterministic: the same line on every run. The line
-// aims at the judge's order — frightening first, then vivid, original,
-// and tightly built, with the last words landing the blow.
+// u-azazex-one-line-one-chill-6d4d5488 — v2 resubmit (revise agent).
+// One-sentence horror: a lullaby that should not have a second verse,
+// sung in sleep by a child who never heard the first. Node 22, stdlib
+// only, no network, deterministic — identical output on every run.
+// v2 entry is wholly new vs v1 (dentist/teeth/drawer/future date);
+// no v1 wording, premise, or image is reused here.
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-// The entry: one sentence, one breath, one chill. The scare is a small,
-// concrete detail — a labelled drawer — and a date that has not happened yet.
-const ENTRY =
-  "My dentist keeps the teeth he pulls, and this morning I found mine in his drawer, labelled with a date three years from now.";
+const SENTENCE =
+  "The lullaby my mother sang me only has one verse, so I froze when my daughter, who never heard it, sang the second in her sleep.";
 
-// The gate wants 1 to 200 characters of UTF-8 text, not only whitespace.
-// The brief wants one sentence, so guard that too: a single terminal full
-// stop, and no other sentence-ending mark anywhere inside the line.
-if (ENTRY.length < 1 || ENTRY.length > 200) {
-  throw new Error(`entry is ${ENTRY.length} characters, outside the 1-200 gate`);
-}
-if (ENTRY.trim().length === 0 || ENTRY.includes("\n")) {
-  throw new Error("entry must be a single non-blank line");
-}
-if (!ENTRY.endsWith(".") || /[.!?][^.]/.test(ENTRY.slice(0, -1))) {
-  throw new Error("entry must be exactly one sentence");
+function fail(message: string): never {
+  throw new Error(`entry rejected: ${message}`);
 }
 
-// MAKEFUN_OUTPUT_DIR names the directory; the file itself is entry.txt
-// inside it, defaulting to /output/entry.txt when the variable is unset.
-const outDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
-mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, "entry.txt"), ENTRY, "utf8");
+function checkLength(text: string): void {
+  const chars = [...text];
+  if (chars.length < 1 || chars.length > 200) {
+    fail(`length ${chars.length} outside 1-200`);
+  }
+}
 
-// Stdout gets the line too (a trailing newline here is fine).
-console.log(ENTRY);
+function checkSingleLine(text: string): void {
+  for (const ch of text) {
+    if (ch === "\n" || ch === "\r") fail("contains a line break");
+  }
+  if (text !== text.trim()) fail("leading or trailing whitespace");
+  if (text.trim().length === 0) fail("blank");
+}
+
+function checkOneSentence(text: string): void {
+  const body = text.slice(0, -1);
+  const terminators = [".", "!", "?"];
+  for (const mark of terminators) {
+    if (body.includes(mark)) fail(`extra sentence terminator ${mark}`);
+  }
+  if (!text.endsWith(".")) fail("must end with a full stop");
+}
+
+function resolveOutDir(): string {
+  const dir = process.env.MAKEFUN_OUTPUT_DIR;
+  return dir && dir.length > 0 ? dir : "/output";
+}
+
+function main(): void {
+  checkLength(SENTENCE);
+  checkSingleLine(SENTENCE);
+  checkOneSentence(SENTENCE);
+  const dir = resolveOutDir();
+  fs.mkdirSync(dir, { recursive: true });
+  const target = path.join(dir, "entry.txt");
+  fs.writeFileSync(target, Buffer.from(SENTENCE, "utf8"));
+  process.stdout.write(SENTENCE + "\n");
+}
+
+main();
